@@ -8,7 +8,6 @@
 
 .navbar__inner {
   display: flex;
-  max-width: calc(var(--shell) + var(--gutter) * 2);
   margin-inline: auto;
   padding: var(--space-4) var(--gutter);
   align-items: center;
