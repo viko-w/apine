@@ -17,14 +17,14 @@
 }
 
 .navbar__mark {
-  font-size: 1.0625rem;
-  font-weight: 650;
-  letter-spacing: -0.02em;
-  color: var(--text);
+  display: block;
+  line-height: 0;
 }
 
-.navbar__dot {
-  color: var(--accent);
+.navbar__logo {
+  display: block;
+  width: auto;
+  height: 20px;
 }
 
 .navbar__links {

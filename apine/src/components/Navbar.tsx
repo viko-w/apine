@@ -10,10 +10,7 @@ function Navbar() {
     <header className="navbar">
       <div className="navbar__inner">
         <span className="navbar__mark">
-          apine
-          <span className="navbar__dot" aria-hidden="true">
-            .
-          </span>
+          <img className="navbar__logo" src="/apine-logo.svg" alt="apine" />
         </span>
         <nav aria-label="Main">
           <ul className="navbar__links">
