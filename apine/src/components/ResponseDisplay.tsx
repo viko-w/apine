@@ -7,6 +7,11 @@ type ResponseDisplayProps = {
   error: string | null
 }
 
+const RESPONSE_PAGES = {
+  Pretty: 'pretty',
+  Raw: 'raw',
+}
+
 function formatResponse(response: unknown) {
   if (typeof response === 'string') {
     return response
@@ -79,7 +84,19 @@ export default function ResponseDisplay({
       ) : response === null ? (
         <p className="response__message">Send a request to see its response.</p>
       ) : (
-        <pre className="response__body"><code>{highlightJson(response)}</code></pre>
+        <>
+          <div className="response__tabs" aria-label="Response views">
+            {Object.entries(RESPONSE_PAGES).map(([label, page]) => (
+              <span
+                className={`response__tab${label === 'Pretty' ? ' response__tab--active' : ''}`}
+                key={page}
+              >
+                {label}
+              </span>
+            ))}
+          </div>
+          <pre className="response__body"><code>{highlightJson(response)}</code></pre>
+        </>
       )}
     </section>
   )
