@@ -96,8 +96,8 @@
 .url-bar__input {
   flex: 1;
   min-width: 0;
-  font: inherit;
-  font-size: 0.9375rem;
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
   color: var(--text);
   background: var(--bg-raised);
   border: 1px solid var(--border);

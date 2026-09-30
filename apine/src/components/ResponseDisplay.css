@@ -27,7 +27,7 @@
   overflow-x: auto;
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
-  background: var(--bg-raised);
+  background: var(--bg-half);
 }
 
 .response__body {
@@ -43,6 +43,32 @@
   padding: 0;
   border: 0;
   background: transparent;
+}
+
+.response__token--key {
+  color: var(--accent-hover);
+  font-weight: bold;
+}
+
+.response__token--string {
+  color: #ebd763;
+}
+
+.response__token--number {
+  color: #77beed;
+}
+
+.response__token--boolean {
+  color: #bd8ff3;
+}
+
+.response__token--null {
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+.response__token--punctuation {
+  color: var(--text-muted);
 }
 
 .response__message {
