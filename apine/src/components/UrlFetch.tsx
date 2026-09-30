@@ -1,7 +1,17 @@
 import React from "react"
 import './UrlFetch.css'
 
-export default function UrlFetch() {
+type UrlFetchProps = {
+  onResponse: (response: unknown) => void
+  onLoadingChange: (loading: boolean) => void
+  onError: (error: string | null) => void
+}
+
+export default function UrlFetch({
+  onResponse,
+  onLoadingChange,
+  onError,
+}: UrlFetchProps) {
   const methods = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'HEAD', 'OPTIONS']
   const [method, setMethod] = React.useState('GET')
   const [url, setUrl] = React.useState('')
@@ -10,6 +20,35 @@ export default function UrlFetch() {
   const methodMenuRef = React.useRef<HTMLDivElement>(null)
   const methodTriggerRef = React.useRef<HTMLButtonElement>(null)
   const methodOptionRefs = React.useRef<Array<HTMLButtonElement | null>>([])
+
+  async function fetchAPIData(requestUrl: string) {
+    if (!requestUrl) {
+      onError('Enter a URL before sending the request.')
+      return
+    }
+
+    onLoadingChange(true)
+    onError(null)
+
+    try {
+      const response = await fetch(requestUrl, { method })
+      const content = await response.json()
+
+      if (!response.ok) {
+        throw new Error(`Request failed with status ${response.status}.`)
+      }
+
+      onResponse(content)
+    } catch (requestError) {
+      onError(
+        requestError instanceof Error
+          ? requestError.message
+          : 'The request could not be completed.',
+      )
+    } finally {
+      onLoadingChange(false)
+    }
+  }
 
   const closeMethodMenu = () => {
     setIsMethodMenuOpen(false)
@@ -102,7 +141,6 @@ export default function UrlFetch() {
     document.addEventListener('pointerdown', handlePointerDown)
     return () => document.removeEventListener('pointerdown', handlePointerDown)
   }, [isMethodMenuOpen])
-
   return (
     <div className="url-bar">
       <div
@@ -168,7 +206,11 @@ export default function UrlFetch() {
         onChange={(e) => setUrl(e.target.value)}
         aria-label="Request URL"
       />
-      <button className="url-bar__send button" type="button">
+      <button
+        className="url-bar__send button"
+        type="button"
+        onClick={() => fetchAPIData(url)}
+      >
         SEND
       </button>
     </div>
