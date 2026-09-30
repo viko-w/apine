@@ -1,0 +1,7 @@
+.sidebar{
+    border-left: 2px solid var(--border);
+    background-color: var(--bg-half);
+    height: 100%;
+    width: 100%;
+    padding: 1.5rem 1rem;
+}

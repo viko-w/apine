@@ -149,6 +149,10 @@ code {
   transform: translateY(1px);
 }
 
+.flex{
+  display: flex;
+}
+
 @media (prefers-reduced-motion: reduce) {
   html {
     scroll-behavior: auto;

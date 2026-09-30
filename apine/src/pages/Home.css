@@ -1,0 +1,14 @@
+.fetch-body{
+  width: 100%;
+  padding: 2rem 2rem 0 0;
+}
+
+.sidebar-body{
+  width: 600px;
+}
+
+@media (max-width: 1400px){
+  .sidebar-body{
+    display: none;
+  }
+}

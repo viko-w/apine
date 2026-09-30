@@ -25,17 +25,11 @@
 
 .main {
   flex: 1;
-  padding: clamp(var(--space-6), 2vw, var(--space-8)) var(--gutter)
-    var(--space-8);
+  padding: 0 0 0 2rem;
 }
 
 .main:focus {
   outline: none;
-}
-
-.page {
-  max-width: var(--shell);
-  margin-inline: auto;
 }
 
 @keyframes page-in {
