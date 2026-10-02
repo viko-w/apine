@@ -1,5 +1,5 @@
 import './ResponseDisplay.css'
-import { useState } from 'react'
+import { useLayoutEffect, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
 
 type ResponseDisplayProps = {
@@ -171,6 +171,46 @@ function renderTable(response: unknown): ReactNode {
   return <table className="response__table"><tbody><tr><th>Value</th><td>{renderCell(response)}</td></tr></tbody></table>
 }
 
+function ScrollableResponse({ children, className }: { children: ReactNode; className: string }) {
+  const ref = useRef<HTMLDivElement>(null)
+  const [scrollEdges, setScrollEdges] = useState({ left: false, right: false })
+
+  useLayoutEffect(() => {
+    const element = ref.current
+    if (!element) return
+
+    const updateScrollEdges = () => {
+      setScrollEdges({
+        left: element.scrollLeft > 1,
+        right: element.scrollLeft + element.clientWidth < element.scrollWidth - 1,
+      })
+    }
+
+    updateScrollEdges()
+    element.addEventListener('scroll', updateScrollEdges, { passive: true })
+    window.addEventListener('resize', updateScrollEdges)
+    const observer = new ResizeObserver(updateScrollEdges)
+    observer.observe(element)
+    if (element.firstElementChild) observer.observe(element.firstElementChild)
+
+    return () => {
+      element.removeEventListener('scroll', updateScrollEdges)
+      window.removeEventListener('resize', updateScrollEdges)
+      observer.disconnect()
+    }
+  }, [children])
+
+  return (
+    <div
+      className={`response__scroll${scrollEdges.left ? ' response__scroll--left' : ''}${scrollEdges.right ? ' response__scroll--right' : ''}`}
+    >
+      <div className={className} ref={ref}>
+        {children}
+      </div>
+    </div>
+  )
+}
+
 export default function ResponseDisplay({
   response,
   loading,
@@ -204,9 +244,9 @@ export default function ResponseDisplay({
             ))}
           </div>
           {activePage === 'json' ? (
-            <pre className="response__body"><code>{highlightJson(response)}</code></pre>
+            <ScrollableResponse className="response__body"><pre><code>{highlightJson(response)}</code></pre></ScrollableResponse>
           ) : (
-            <div className="response__body response__body--table">{renderTable(response)}</div>
+            <ScrollableResponse className="response__body response__body--table">{renderTable(response)}</ScrollableResponse>
           )}
         </>
       )}
