@@ -73,6 +73,25 @@
   background: transparent;
 }
 
+.response__table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+}
+
+.response__table th,
+.response__table td {
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--border);
+  overflow-wrap: anywhere;
+}
+
+.response__table th {
+  color: var(--accent-hover);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
 .response__token--key {
   color: var(--accent-hover);
   font-weight: bold;
