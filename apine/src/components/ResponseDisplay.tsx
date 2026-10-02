@@ -1,4 +1,5 @@
 import './ResponseDisplay.css'
+import { useState } from 'react'
 import type { ReactNode } from 'react'
 
 type ResponseDisplayProps = {
@@ -8,8 +9,8 @@ type ResponseDisplayProps = {
 }
 
 const RESPONSE_PAGES = {
-  Pretty: 'pretty',
-  Raw: 'raw',
+  Json: 'json',
+  Table: 'table',
 }
 
 function formatResponse(response: unknown) {
@@ -72,6 +73,8 @@ export default function ResponseDisplay({
   loading,
   error,
 }: ResponseDisplayProps) {
+  const [activePage, setActivePage] = useState('json')
+
   return (
     <section className="response" aria-live="polite" aria-busy={loading}>
       <div className="response__header">
@@ -87,12 +90,14 @@ export default function ResponseDisplay({
         <>
           <div className="response__tabs" aria-label="Response views">
             {Object.entries(RESPONSE_PAGES).map(([label, page]) => (
-              <span
-                className={`response__tab${label === 'Pretty' ? ' response__tab--active' : ''}`}
+              <button
+                className={`response__tab${page === activePage ? ' response__tab--active' : ''}`}
                 key={page}
+                onClick={() => setActivePage(page)}
+                type="button"
               >
                 {label}
-              </span>
+              </button>
             ))}
           </div>
           <pre className="response__body"><code>{highlightJson(response)}</code></pre>
