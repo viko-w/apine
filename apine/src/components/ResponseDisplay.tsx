@@ -206,7 +206,7 @@ export default function ResponseDisplay({
           {activePage === 'json' ? (
             <pre className="response__body"><code>{highlightJson(response)}</code></pre>
           ) : (
-            <div className="response__body">{renderTable(response)}</div>
+            <div className="response__body response__body--table">{renderTable(response)}</div>
           )}
         </>
       )}
