@@ -68,16 +68,52 @@ function highlightJson(response: unknown): ReactNode {
   return tokens
 }
 
-function formatCell(value: unknown) {
-  if (value !== null && typeof value === 'object') {
-    return JSON.stringify(value)
+function renderCell(value: unknown, indent = 0, colorValue = false): ReactNode {
+  if (value === null) {
+    return <span className="response__token response__token--null">null</span>
   }
 
-  return String(value)
+  if (typeof value !== 'object') {
+    const tokenClass = typeof value === 'boolean'
+      ? 'response__token--boolean'
+      : colorValue && typeof value === 'string'
+      ? 'response__token--string'
+      : colorValue && typeof value === 'number'
+        ? 'response__token--number'
+        : ''
+    return <span className={`response__token ${tokenClass}`}>{String(value)}</span>
+  }
+
+  const entries = Array.isArray(value)
+    ? value.map((entry, index) => [index, entry] as const)
+    : Object.entries(value)
+
+  if (!entries.length) {
+    return <span className="response__token response__token--punctuation">{Array.isArray(value) ? '[]' : '{}'}</span>
+  }
+
+  return entries.map(([key, entry], index) => {
+    const nested = entry !== null && typeof entry === 'object'
+    return (
+      <span key={`${key}-${index}`}>
+        {index > 0 && '\n'}
+        {' '.repeat(indent)}
+        <span className="response__token response__token--key">{key}:</span>
+        {nested ? (
+          <>
+            {'\n'}
+            {renderCell(entry, indent + 2, true)}
+          </>
+        ) : (
+          <> {renderCell(entry, 0, true)}</>
+        )}
+      </span>
+    )
+  })
 }
 
-function columnWidth(column: string) {
-  return Math.max(column.length * 2, column.length + 8)
+function formatHeader(value: string) {
+  return value ? value[0].toUpperCase() + value.slice(1) : value
 }
 
 function renderTable(response: unknown): ReactNode {
@@ -94,17 +130,15 @@ function renderTable(response: unknown): ReactNode {
         <thead>
           <tr>
             {columns.map((column) => (
-              <th key={column} style={{ width: `${columnWidth(column)}ch` }}>{column}</th>
+              <th key={column}>{formatHeader(column)}</th>
             ))}
           </tr>
         </thead>
         <tbody>
           {rows.map((row, index) => (
-            <tr key={index}>
+              <tr key={index}>
               {columns.map((column) => (
-                <td key={column} style={{ maxWidth: `${columnWidth(column)}ch` }}>
-                  {formatCell(row[column])}
-                </td>
+                <td key={column}>{renderCell(row[column])}</td>
               ))}
             </tr>
           ))}
@@ -118,15 +152,15 @@ function renderTable(response: unknown): ReactNode {
       <table className="response__table">
         <thead>
           <tr>
-            <th style={{ width: `${columnWidth('Key')}ch` }}>Key</th>
-            <th style={{ width: `${columnWidth('Value')}ch` }}>Value</th>
+            <th>Key</th>
+            <th>Value</th>
           </tr>
         </thead>
         <tbody>
           {Object.entries(response).map(([key, value]) => (
             <tr key={key}>
-              <th style={{ width: `${columnWidth(key)}ch` }}>{key}</th>
-              <td style={{ maxWidth: `${columnWidth('Value')}ch` }}>{formatCell(value)}</td>
+            <th>{formatHeader(key)}</th>
+            <td>{renderCell(value)}</td>
             </tr>
           ))}
         </tbody>
@@ -134,7 +168,7 @@ function renderTable(response: unknown): ReactNode {
     )
   }
 
-  return <table className="response__table"><tbody><tr><th>Value</th><td>{formatCell(response)}</td></tr></tbody></table>
+  return <table className="response__table"><tbody><tr><th>Value</th><td>{renderCell(response)}</td></tr></tbody></table>
 }
 
 export default function ResponseDisplay({
