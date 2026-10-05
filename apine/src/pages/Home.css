@@ -1,10 +1,11 @@
 .fetch-body{
-  width: 100%;
+  flex: 1 1 auto;
+  min-width: 0;
   padding: 2rem 2rem 0 0;
 }
 
 .sidebar-body{
-  width: 600px;
+  flex: 0 0 420px;
 }
 
 @media (max-width: 1400px){
