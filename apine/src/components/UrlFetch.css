@@ -3,110 +3,176 @@
   align-items: stretch;
 }
 
-.headers {
+.request {
   margin: var(--space-4) 0 var(--space-3);
   border-top: 1px solid var(--border);
 }
 
-.headers__summary {
+.request__tabs {
   display: flex;
+  gap: var(--space-4);
+}
+
+.request__toggle {
+  display: grid;
+  place-items: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  margin-left: auto;
+  align-self: center;
+  color: var(--text-muted);
+  background: transparent;
+  border: 0;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition:
+    color 120ms var(--ease),
+    background-color 120ms var(--ease);
+}
+
+.request__toggle svg {
+  width: 1rem;
+  height: 1rem;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  transition: transform 160ms var(--ease);
+}
+
+.request__toggle[aria-expanded='false'] svg {
+  transform: rotate(-90deg);
+}
+
+.request__toggle:hover {
+  color: var(--text);
+  background: var(--bg-half);
+}
+
+.request__toggle:focus-visible {
+  outline: none;
+  color: var(--text);
+  background: var(--bg-half);
+}
+
+.request__tab {
+  position: relative;
+  display: inline-flex;
   align-items: center;
   gap: var(--space-2);
   padding: var(--space-2) 0;
   color: var(--text-muted);
+  font: inherit;
   font-size: 0.875rem;
   font-weight: 500;
+  background: transparent;
+  border: 0;
   cursor: pointer;
   user-select: none;
-  list-style: none;
   transition: color 120ms var(--ease);
 }
 
-.headers__summary::-webkit-details-marker {
-  display: none;
-}
-
-.headers__summary::after {
-  width: 0.4rem;
-  height: 0.4rem;
-  margin-left: auto;
-  border-right: 1.5px solid currentColor;
-  border-bottom: 1.5px solid currentColor;
+.request__tab::after {
+  position: absolute;
+  right: 0;
+  bottom: -1px;
+  left: 0;
+  height: 2px;
+  background: var(--accent);
   content: '';
-  transform: rotate(45deg) translate(-2px, -2px);
+  transform: scaleX(0);
+  transform-origin: left;
   transition: transform 160ms var(--ease);
 }
 
-.headers[open] .headers__summary::after {
-  transform: rotate(225deg);
-}
-
-.headers__summary:hover {
+.request__tab:hover,
+.request__tab--active {
   color: var(--text);
 }
 
-.headers__summary:focus-visible {
+.request__tab:focus-visible {
+  outline: none;
   color: var(--text);
 }
 
-.headers__count {
+.request__tab--active::after {
+  transform: scaleX(1);
+}
+
+.request__tab-count {
   color: var(--text-muted);
   font-size: 0.8125rem;
+  font-weight: 400;
   font-variant-numeric: tabular-nums;
 }
 
-.headers__panel {
-  display: grid;
+.request__panels:not([hidden]) {
+  animation: request-reveal 180ms var(--ease);
 }
 
-.headers[open] .headers__panel {
-  animation: headers-reveal 180ms var(--ease);
-}
-
-@keyframes headers-reveal {
+@keyframes request-reveal {
   from {
     opacity: 0;
     transform: translateY(-0.25rem);
   }
 }
 
-.headers__row,
-.headers__labels {
+.request__panel {
+  padding-top: var(--space-2);
+}
+
+.request__panel[hidden] {
+  display: none;
+}
+
+.request__panel:focus-visible {
+  outline: none;
+}
+
+.rows {
+  display: grid;
+}
+
+
+
+.rows__row,
+.rows__labels {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1.6fr) 2rem;
   gap: var(--space-2);
   align-items: center;
 }
 
-.headers__row {
+.rows__row {
   padding: var(--space-2) 0;
 }
 
-.headers__row + .headers__row {
+.rows__row + .rows__row {
   border-top: 1px solid var(--border);
 }
 
-.headers__labels {
+.rows__labels {
   padding: var(--space-1) 0 var(--space-2);
   color: var(--text-muted);
   font-size: 0.75rem;
   border-bottom: 1px solid var(--border);
 }
 
-.headers__cell {
+.rows__cell {
   display: grid;
   gap: var(--space-1);
   min-width: 0;
 }
 
-.headers__cell-label {
+.rows__cell-label {
   display: none;
   color: var(--text-muted);
   font-size: 0.6875rem;
   font-weight: 500;
 }
 
-.headers__row input {
+.rows__row input {
   min-width: 0;
   width: 100%;
   padding: 0.4rem 0.5rem;
@@ -122,20 +188,20 @@
     background-color 120ms var(--ease);
 }
 
-.headers__row input::placeholder {
+.rows__row input::placeholder {
   color: var(--text-muted);
 }
 
-.headers__row input:hover {
+.rows__row input:hover {
   border-color: var(--text-muted);
 }
 
-.headers__row input:focus-visible {
+.rows__row input:focus-visible {
   border-color: var(--accent);
   outline: none;
 }
 
-.headers__remove {
+.rows__remove {
   display: grid;
   place-items: center;
   width: 2rem;
@@ -150,9 +216,9 @@
     background-color 120ms var(--ease);
 }
 
-.headers__remove svg,
-.headers__add svg,
-.headers__issue svg {
+.rows__remove svg,
+.rows__add svg,
+.rows__issue svg {
   width: 0.875rem;
   height: 0.875rem;
   fill: none;
@@ -162,31 +228,31 @@
   stroke-linejoin: round;
 }
 
-.headers__issue svg {
+.rows__issue svg {
   flex: none;
   width: 0.75rem;
   height: 0.75rem;
   margin-top: 0.15rem;
 }
 
-.headers__remove:hover {
+.rows__remove:hover {
   color: var(--accent-hover);
   background: var(--bg-half);
 }
 
-.headers__empty,
-.headers__issue {
+.rows__empty,
+.rows__issue {
   margin: 0;
   color: var(--text-muted);
   font-size: 0.8125rem;
   line-height: 1.5;
 }
 
-.headers__empty {
+.rows__empty {
   padding: var(--space-2) 0 var(--space-3);
 }
 
-.headers__issue {
+.rows__issue {
   display: flex;
   grid-column: 1 / -1;
   gap: var(--space-2);
@@ -196,11 +262,11 @@
   line-height: 1.45;
 }
 
-.headers__row--skipped {
+.rows__row--skipped {
   padding-bottom: var(--space-3);
 }
 
-.headers__add {
+.rows__add {
   display: inline-flex;
   align-items: center;
   justify-self: start;
@@ -217,11 +283,11 @@
   transition: color 120ms var(--ease);
 }
 
-.headers__add:hover {
+.rows__add:hover {
   color: var(--text);
 }
 
-.headers__add:active {
+.rows__add:active {
   color: var(--accent-hover);
 }
 
@@ -355,30 +421,30 @@
     flex-basis: calc(100% - 110px - var(--space-3));
   }
 
-  .headers__row {
+  .rows__row {
     row-gap: var(--space-3);
     grid-template-columns: minmax(0, 1fr) 2.5rem;
   }
 
-  .headers__cell:first-of-type {
+  .rows__cell:first-of-type {
     grid-column: 1 / -1;
   }
 
-  .headers__cell-label {
+  .rows__cell-label {
     display: block;
   }
 
-  .headers__remove {
+  .rows__remove {
     width: 2.5rem;
     height: 2.5rem;
     margin-bottom: 0.125rem;
   }
 
-  .headers__labels {
+  .rows__labels {
     display: none;
   }
 
-  .headers__issue {
+  .rows__issue {
     padding-top: 0;
   }
 }

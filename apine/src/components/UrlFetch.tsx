@@ -8,9 +8,241 @@ type UrlFetchProps = {
   onError: (error: string | null) => void
 }
 
-type RequestHeader = {
+type RequestRow = {
   name: string
   value: string
+}
+
+const REQUEST_TABS = [
+  {
+    id: 'headers',
+    label: 'Request headers',
+    countKey: 'headers',
+    countNoun: 'headers',
+  },
+  {
+    id: 'params',
+    label: 'Parameters',
+    countKey: 'params',
+    countNoun: 'parameters',
+  },
+] as const
+
+type RowEditorProps = {
+  idPrefix: string
+  rows: RequestRow[]
+  rowNoun: string
+  nameLabel: string
+  valueLabel: string
+  namePlaceholder: string
+  valuePlaceholder: string
+  emptyText: string
+  addLabel: string
+  flagDuplicateNames: boolean
+  onChange: (index: number, field: keyof RequestRow, value: string) => void
+  onRemove: (index: number) => void
+  onAdd: () => void
+}
+
+function RowEditor({
+  idPrefix,
+  rows,
+  rowNoun,
+  nameLabel,
+  valueLabel,
+  namePlaceholder,
+  valuePlaceholder,
+  emptyText,
+  addLabel,
+  flagDuplicateNames,
+  onChange,
+  onRemove,
+  onAdd,
+}: RowEditorProps) {
+  const addButtonRef = React.useRef<HTMLButtonElement>(null)
+  const removeRefs = React.useRef<Array<HTMLButtonElement | null>>([])
+  const nameRefs = React.useRef<Array<HTMLInputElement | null>>([])
+
+  const issues = rows.map((row, index) => {
+    const name = row.name.trim()
+
+    if (!name) {
+      return row.value.trim()
+        ? `Not sent — this row has no name.`
+        : null
+    }
+
+    if (!flagDuplicateNames) {
+      return null
+    }
+
+    const normalizedName = name.toLowerCase()
+    const isLastOfItsName =
+      rows.reduce(
+        (last, { name: otherName }, otherIndex) =>
+          otherName.trim().toLowerCase() === normalizedName ? otherIndex : last,
+        -1,
+      ) === index
+
+    return isLastOfItsName
+      ? null
+      : `Not sent — only the last ${name} value is sent.`
+  })
+
+  const skippedCount = issues.filter(Boolean).length
+
+  const handleRemove = (index: number) => {
+    const nextFocusIndex =
+      rows.length === 1 ? -1 : Math.min(index, rows.length - 2)
+
+    flushSync(() => {
+      onRemove(index)
+    })
+
+    const nextTarget =
+      nextFocusIndex === -1
+        ? addButtonRef.current
+        : removeRefs.current[nextFocusIndex]
+    nextTarget?.focus()
+  }
+
+  const handleAdd = () => {
+    flushSync(() => {
+      onAdd()
+    })
+
+    nameRefs.current[rows.length]?.focus()
+  }
+
+  return (
+    <div className="rows">
+      {rows.length === 0 ? (
+        <p className="rows__empty">{emptyText}</p>
+      ) : (
+        <>
+          <div className="rows__labels">
+            <span id={`${idPrefix}-label-name`}>{nameLabel}</span>
+            <span id={`${idPrefix}-label-value`}>{valueLabel}</span>
+            <span />
+          </div>
+          {rows.map((row, index) => {
+            const issue = issues[index]
+            const name = row.name.trim()
+
+            return (
+              <div
+                className={`rows__row${issue ? ' rows__row--skipped' : ''}`}
+                key={index}
+                role="group"
+                aria-label={
+                  name ? `${rowNoun} ${name}` : `${rowNoun} without a name`
+                }
+              >
+                <label className="rows__cell">
+                  <span className="rows__cell-label">Name</span>
+                  <input
+                    type="text"
+                    placeholder={namePlaceholder}
+                    aria-labelledby={`${idPrefix}-label-name`}
+                    aria-invalid={issue ? true : undefined}
+                    aria-describedby={
+                      issue ? `${idPrefix}-issue-${index}` : undefined
+                    }
+                    spellCheck={false}
+                    autoComplete="off"
+                    autoCorrect="off"
+                    autoCapitalize="off"
+                    value={row.name}
+                    ref={(element) => {
+                      nameRefs.current[index] = element
+                    }}
+                    onChange={(event) =>
+                      onChange(index, 'name', event.target.value)
+                    }
+                  />
+                </label>
+                <label className="rows__cell">
+                  <span className="rows__cell-label">Value</span>
+                  <input
+                    type="text"
+                    placeholder={valuePlaceholder}
+                    aria-labelledby={`${idPrefix}-label-value`}
+                    spellCheck={false}
+                    autoComplete="off"
+                    autoCorrect="off"
+                    autoCapitalize="off"
+                    value={row.value}
+                    onChange={(event) =>
+                      onChange(index, 'value', event.target.value)
+                    }
+                  />
+                </label>
+                <button
+                  className="rows__remove"
+                  type="button"
+                  aria-label={`Remove ${name || 'unnamed'} ${rowNoun}`}
+                  ref={(element) => {
+                    removeRefs.current[index] = element
+                  }}
+                  onClick={() => handleRemove(index)}
+                >
+                  <svg viewBox="0 0 16 16" aria-hidden="true">
+                    <path d="M4.5 4.5l7 7M11.5 4.5l-7 7" />
+                  </svg>
+                </button>
+                {issue && (
+                  <p className="rows__issue" id={`${idPrefix}-issue-${index}`}>
+                    <svg viewBox="0 0 16 16" aria-hidden="true">
+                      <path d="M8 2.5l5.5 10.5h-11L8 2.5z" />
+                      <path d="M8 6.75v3M8 11.4v0.6" />
+                    </svg>
+                    {issue}
+                  </p>
+                )}
+              </div>
+            )
+          })}
+          <p className="visually-hidden" role="status">
+            {skippedCount > 0 &&
+              `${skippedCount} ${
+                skippedCount === 1 ? rowNoun : `${rowNoun}s`
+              } will not be sent.`}
+          </p>
+        </>
+      )}
+      <button
+        className="rows__add"
+        type="button"
+        ref={addButtonRef}
+        onClick={handleAdd}
+      >
+        <svg viewBox="0 0 16 16" aria-hidden="true">
+          <path d="M8 3.5v9M3.5 8h9" />
+        </svg>
+        {addLabel}
+      </button>
+    </div>
+  )
+}
+
+function withParams(requestUrl: string, params: RequestRow[]) {
+  const activeParams = params.filter(({ name }) => name.trim())
+
+  if (activeParams.length === 0) {
+    return requestUrl
+  }
+
+  const hashIndex = requestUrl.indexOf('#')
+  const hash = hashIndex === -1 ? '' : requestUrl.slice(hashIndex)
+  const base = hashIndex === -1 ? requestUrl : requestUrl.slice(0, hashIndex)
+  const queryIndex = base.indexOf('?')
+  const path = queryIndex === -1 ? base : base.slice(0, queryIndex)
+  const existingQuery = queryIndex === -1 ? '' : base.slice(queryIndex + 1)
+  const added = new URLSearchParams(
+    activeParams.map(({ name, value }) => [name.trim(), value]),
+  ).toString()
+
+  return `${path}?${existingQuery ? `${existingQuery}&` : ''}${added}${hash}`
 }
 
 export default function UrlFetch({
@@ -21,15 +253,19 @@ export default function UrlFetch({
   const methods = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'HEAD', 'OPTIONS']
   const [method, setMethod] = React.useState('GET')
   const [url, setUrl] = React.useState('')
-  const [headers, setHeaders] = React.useState<RequestHeader[]>([])
+  const [headers, setHeaders] = React.useState<RequestRow[]>([])
+  const [params, setParams] = React.useState<RequestRow[]>([])
+  const [activeRequestTab, setActiveRequestTab] = React.useState<
+    (typeof REQUEST_TABS)[number]['id']
+  >(REQUEST_TABS[0].id)
+  const [isRequestPanelOpen, setIsRequestPanelOpen] = React.useState(false)
+  const requestToggleRef = React.useRef<HTMLButtonElement>(null)
   const [isMethodMenuOpen, setIsMethodMenuOpen] = React.useState(false)
   const [highlightedMethodIndex, setHighlightedMethodIndex] = React.useState(0)
   const methodMenuRef = React.useRef<HTMLDivElement>(null)
   const methodTriggerRef = React.useRef<HTMLButtonElement>(null)
   const methodOptionRefs = React.useRef<Array<HTMLButtonElement | null>>([])
-  const addHeaderButtonRef = React.useRef<HTMLButtonElement>(null)
-  const removeHeaderRefs = React.useRef<Array<HTMLButtonElement | null>>([])
-  const headerNameRefs = React.useRef<Array<HTMLInputElement | null>>([])
+  const requestTabRefs = React.useRef<Array<HTMLButtonElement | null>>([])
 
   const sentHeaderCount = new Set(
     headers
@@ -37,28 +273,12 @@ export default function UrlFetch({
       .filter(Boolean),
   ).size
 
-  const headerIssues = headers.map((header, index) => {
-    const name = header.name.trim()
+  const sentParamCount = params.filter(({ name }) => name.trim()).length
 
-    if (!name) {
-      return header.value.trim()
-        ? 'Not sent — this row has no name.'
-        : null
-    }
-
-    const normalizedName = name.toLowerCase()
-    const isLastOfItsName = headers.reduce(
-      (last, { name: otherName }, otherIndex) =>
-        otherName.trim().toLowerCase() === normalizedName ? otherIndex : last,
-      -1,
-    ) === index
-
-    return isLastOfItsName
-      ? null
-      : `Not sent — only the last ${name} value is sent.`
-  })
-
-  const skippedHeaderCount = headerIssues.filter(Boolean).length
+  const tabCounts: Record<string, number> = {
+    headers: sentHeaderCount,
+    params: sentParamCount,
+  }
 
   async function fetchAPIData(requestUrl: string) {
     if (!requestUrl) {
@@ -75,7 +295,7 @@ export default function UrlFetch({
           .filter(({ name }) => name.trim())
           .map(({ name, value }) => [name.trim(), value]),
       )
-      const response = await fetch(requestUrl, {
+      const response = await fetch(withParams(requestUrl, params), {
         method,
         headers: requestHeaders,
       })
@@ -97,44 +317,60 @@ export default function UrlFetch({
     }
   }
 
-  const updateHeader = (
+  const updateRow = (
+    setRows: React.Dispatch<React.SetStateAction<RequestRow[]>>,
     index: number,
-    field: keyof RequestHeader,
+    field: keyof RequestRow,
     value: string,
   ) => {
-    setHeaders((currentHeaders) =>
-      currentHeaders.map((header, headerIndex) =>
-        headerIndex === index ? { ...header, [field]: value } : header,
+    setRows((currentRows) =>
+      currentRows.map((row, rowIndex) =>
+        rowIndex === index ? { ...row, [field]: value } : row,
       ),
     )
   }
 
-  const removeHeader = (index: number) => {
-    const nextFocusIndex =
-      headers.length === 1 ? -1 : Math.min(index, headers.length - 2)
-
-    flushSync(() => {
-      setHeaders((currentHeaders) =>
-        currentHeaders.filter((_, headerIndex) => headerIndex !== index),
-      )
-    })
-
-    const nextTarget =
-      nextFocusIndex === -1
-        ? addHeaderButtonRef.current
-        : removeHeaderRefs.current[nextFocusIndex]
-    nextTarget?.focus()
+  const removeRow = (
+    setRows: React.Dispatch<React.SetStateAction<RequestRow[]>>,
+    index: number,
+  ) => {
+    setRows((currentRows) =>
+      currentRows.filter((_, rowIndex) => rowIndex !== index),
+    )
   }
 
-  const addHeader = () => {
-    flushSync(() => {
-      setHeaders((currentHeaders) => [
-        ...currentHeaders,
-        { name: '', value: '' },
-      ])
-    })
+  const addRow = (
+    setRows: React.Dispatch<React.SetStateAction<RequestRow[]>>,
+  ) => {
+    setRows((currentRows) => [...currentRows, { name: '', value: '' }])
+  }
 
-    headerNameRefs.current[headers.length]?.focus()
+  const selectRequestTab = (index: number) => {
+    setActiveRequestTab(REQUEST_TABS[index].id)
+    setIsRequestPanelOpen(true)
+    requestTabRefs.current[index]?.focus()
+  }
+
+  const handleRequestTabKeyDown = (
+    event: React.KeyboardEvent<HTMLButtonElement>,
+    index: number,
+  ) => {
+    let nextIndex = index
+
+    if (event.key === 'ArrowRight') {
+      nextIndex = (index + 1) % REQUEST_TABS.length
+    } else if (event.key === 'ArrowLeft') {
+      nextIndex = (index - 1 + REQUEST_TABS.length) % REQUEST_TABS.length
+    } else if (event.key === 'Home') {
+      nextIndex = 0
+    } else if (event.key === 'End') {
+      nextIndex = REQUEST_TABS.length - 1
+    } else {
+      return
+    }
+
+    event.preventDefault()
+    selectRequestTab(nextIndex)
   }
 
   const closeMethodMenu = () => {
@@ -302,122 +538,110 @@ export default function UrlFetch({
           SEND
         </button>
       </div>
-      <details className="headers">
-        <summary className="headers__summary">
-          <span className="headers__label">Request headers</span>
-          {sentHeaderCount > 0 && (
-            <span className="headers__count">
-              {sentHeaderCount}
-              <span className="visually-hidden"> headers will be sent</span>
-            </span>
-          )}
-        </summary>
-        <div className="headers__panel">
-          {headers.length === 0 ? (
-            <p className="headers__empty">
-              No headers yet. The request goes out without any.
-            </p>
-          ) : (
-            <>
-              <div className="headers__labels">
-                <span id="headers-label-name">Header name</span>
-                <span id="headers-label-value">Header value</span>
-                <span />
-              </div>
-              {headers.map((header, index) => {
-                const issue = headerIssues[index]
-                const name = header.name.trim()
+      <section className="request">
+        <div className="request__tabs" role="tablist" aria-label="Request">
+          {REQUEST_TABS.map((tab, index) => {
+            const isActive = tab.id === activeRequestTab
 
-                return (
-                  <div
-                    className={`headers__row${issue ? ' headers__row--skipped' : ''}`}
-                    key={index}
-                    role="group"
-                    aria-label={name ? `Header ${name}` : 'Header without a name'}
-                  >
-                    <label className="headers__cell">
-                      <span className="headers__cell-label">Name</span>
-                      <input
-                        type="text"
-                        placeholder="Content-Type"
-                        aria-labelledby="headers-label-name"
-                        aria-invalid={issue ? true : undefined}
-                        aria-describedby={issue ? `headers-issue-${index}` : undefined}
-                        spellCheck={false}
-                        autoComplete="off"
-                        autoCorrect="off"
-                        autoCapitalize="off"
-                        value={header.name}
-                        ref={(element) => {
-                          headerNameRefs.current[index] = element
-                        }}
-                        onChange={(event) =>
-                          updateHeader(index, 'name', event.target.value)
-                        }
-                      />
-                    </label>
-                    <label className="headers__cell">
-                      <span className="headers__cell-label">Value</span>
-                      <input
-                        type="text"
-                        placeholder="application/json"
-                        aria-labelledby="headers-label-value"
-                        spellCheck={false}
-                        autoComplete="off"
-                        autoCorrect="off"
-                        autoCapitalize="off"
-                        value={header.value}
-                        onChange={(event) =>
-                          updateHeader(index, 'value', event.target.value)
-                        }
-                      />
-                    </label>
-                    <button
-                      className="headers__remove"
-                      type="button"
-                      aria-label={`Remove ${name || 'unnamed'} header`}
-                      ref={(element) => {
-                        removeHeaderRefs.current[index] = element
-                      }}
-                      onClick={() => removeHeader(index)}
-                    >
-                      <svg viewBox="0 0 16 16" aria-hidden="true">
-                        <path d="M4.5 4.5l7 7M11.5 4.5l-7 7" />
-                      </svg>
-                    </button>
-                    {issue && (
-                      <p className="headers__issue" id={`headers-issue-${index}`}>
-                        <svg viewBox="0 0 16 16" aria-hidden="true">
-                          <path d="M8 2.5l5.5 10.5h-11L8 2.5z" />
-                          <path d="M8 6.75v3M8 11.4v.6" />
-                        </svg>
-                        {issue}
-                      </p>
-                    )}
-                  </div>
-                )
-              })}
-              <p className="visually-hidden" role="status">
-                {skippedHeaderCount > 0 &&
-                  `${skippedHeaderCount} ${
-                    skippedHeaderCount === 1 ? 'header' : 'headers'
-                  } will not be sent.`}
-              </p>
-            </>
-          )}
+            return (
+              <button
+                className={`request__tab${isActive ? ' request__tab--active' : ''}`}
+                type="button"
+                role="tab"
+                id={`request-tab-${tab.id}`}
+                aria-selected={isActive}
+                aria-controls={`request-panel-${tab.id}`}
+                tabIndex={isActive ? 0 : -1}
+                key={tab.id}
+                ref={(element) => {
+                  requestTabRefs.current[index] = element
+                }}
+                onClick={() => selectRequestTab(index)}
+                onKeyDown={(event) => handleRequestTabKeyDown(event, index)}
+              >
+                <span className="request__tab-label">{tab.label}</span>
+                {tabCounts[tab.countKey] > 0 && (
+                  <span className="request__tab-count">
+                    {tabCounts[tab.countKey]}
+                    <span className="visually-hidden">
+                      {' '}
+                      {tab.countNoun} will be sent
+                    </span>
+                  </span>
+                )}
+              </button>
+            )
+          })}
           <button
-            className="headers__add"
+            className="request__toggle"
             type="button"
-            ref={addHeaderButtonRef}
-            onClick={addHeader}
+            ref={requestToggleRef}
+            aria-expanded={isRequestPanelOpen}
+            aria-controls="request-panels"
+            aria-label={
+              isRequestPanelOpen
+                ? 'Hide request options'
+                : 'Show request options'
+            }
+            onClick={() => setIsRequestPanelOpen((open) => !open)}
           >
             <svg viewBox="0 0 16 16" aria-hidden="true">
-              <path d="M8 3.5v9M3.5 8h9" />
+              <path d="M4.5 6.5l3.5 3.5 3.5-3.5" />
             </svg>
-            Add header
           </button>
         </div>
-      </details>
+        <div className="request__panels" hidden={!isRequestPanelOpen}>
+          {REQUEST_TABS.map((tab) => (
+            <div
+              className="request__panel"
+              role="tabpanel"
+              key={tab.id}
+              id={`request-panel-${tab.id}`}
+              aria-labelledby={`request-tab-${tab.id}`}
+              tabIndex={0}
+              hidden={tab.id !== activeRequestTab}
+            >
+              {tab.id === 'headers' ? (
+                <RowEditor
+                  idPrefix="headers"
+                  rows={headers}
+                  rowNoun="header"
+                  nameLabel="Header name"
+                  valueLabel="Header value"
+                  namePlaceholder="Content-Type"
+                  valuePlaceholder="application/json"
+                  emptyText="No headers yet. The request goes out without any."
+                  addLabel="Add header"
+                  flagDuplicateNames
+                  onChange={(index, field, value) =>
+                    updateRow(setHeaders, index, field, value)
+                  }
+                  onRemove={(index) => removeRow(setHeaders, index)}
+                  onAdd={() => addRow(setHeaders)}
+                />
+              ) : (
+                <RowEditor
+                  idPrefix="params"
+                  rows={params}
+                  rowNoun="parameter"
+                  nameLabel="Parameter name"
+                  valueLabel="Parameter value"
+                  namePlaceholder="page"
+                  valuePlaceholder="1"
+                  emptyText="No parameters yet. The URL is sent exactly as typed."
+                  addLabel="Add parameter"
+                  flagDuplicateNames={false}
+                  onChange={(index, field, value) =>
+                    updateRow(setParams, index, field, value)
+                  }
+                  onRemove={(index) => removeRow(setParams, index)}
+                  onAdd={() => addRow(setParams)}
+                />
+              )}
+            </div>
+          ))}
+        </div>
+      </section>
     </div>
   )
 }
