@@ -25,3 +25,15 @@ This repository is structured as a monorepo root with the application living in 
 - [Vite](https://vite.dev/) 8
 - [React Router](https://reactrouter.com/) 7
 - [Oxlint](https://oxc.rs/docs/guide/usage/linter)
+- [Tauri](https://tauri.app/) 2 (Rust backend, desktop shell)
+
+## CI & releases
+
+`.github/workflows/ci.yml` lints, type-checks and builds on every push and PR
+to `main`, then runs `cargo fmt`, `clippy` and `check`, plus a Tauri build on
+macOS, Windows and Linux.
+
+Pushing a `v*` tag runs `.github/workflows/release.yml`, which verifies the tag
+against the version in `tauri.conf.json` / `Cargo.toml` and publishes installers
+for macOS, Linux and Windows as a GitHub Release. See
+[apine/README.md](./apine/README.md#releasing) for the full steps.

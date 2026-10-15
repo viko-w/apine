@@ -1,0 +1,122 @@
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+defaults:
+  run:
+    working-directory: apine
+
+jobs:
+  verify:
+    name: Verify tag matches version
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Set up Node
+        uses: actions/setup-node@v7
+
+      - name: Compare tag to declared versions
+        run: |
+          tag_version="${GITHUB_REF_NAME#v}"
+          conf_version="$(node -p "require('./src-tauri/tauri.conf.json').version")"
+          cargo_version="$(sed -n 's/^version = "\(.*\)"/\1/p' src-tauri/Cargo.toml | head -1)"
+          echo "tag=${tag_version} tauri.conf.json=${conf_version} Cargo.toml=${cargo_version}"
+          if [ "$tag_version" != "$conf_version" ] || [ "$tag_version" != "$cargo_version" ]; then
+            echo "::error::Tag ${GITHUB_REF_NAME} does not match the version in tauri.conf.json / Cargo.toml"
+            exit 1
+          fi
+
+  release:
+    name: ${{ matrix.label }}
+    needs: verify
+    runs-on: ${{ matrix.platform }}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - label: macOS (Apple Silicon)
+            platform: macos-latest
+            rust-target: aarch64-apple-darwin
+            args: --target aarch64-apple-darwin --bundles app,dmg
+            apt: ''
+          - label: macOS (Intel)
+            platform: macos-latest
+            rust-target: x86_64-apple-darwin
+            args: --target x86_64-apple-darwin --bundles app,dmg
+            apt: ''
+          - label: Linux (AppImage, deb)
+            platform: ubuntu-22.04
+            rust-target: ''
+            args: --bundles appimage,deb
+            apt: >-
+              libwebkit2gtk-4.1-dev
+              libappindicator3-dev
+              librsvg2-dev
+              patchelf
+              libfuse2
+          - label: Windows (NSIS, MSI)
+            platform: windows-latest
+            rust-target: ''
+            args: --bundles nsis,msi
+            apt: ''
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Install Linux build dependencies
+        if: matrix.apt != ''
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ${{ matrix.apt }}
+
+      - name: Set up Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: 26
+          cache: 'npm'
+          cache-dependency-path: apine/package-lock.json
+
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.rust-target }}
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: apine/src-tauri -> target
+
+      - name: Install dependencies
+        run: npm ci
+
+      # Artifacts are unsigned. On macOS users must right-click > Open (or run
+      # xattr -d com.apple.quarantine <app>) the first time; Windows SmartScreen
+      # shows a "more info" prompt. Add APPLE_* / TAURI_SIGNING_PRIVATE_KEY
+      # secrets here later to notarise and sign.
+      - name: Build and publish
+        uses: tauri-apps/tauri-action@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          projectPath: apine
+          tagName: ${{ github.ref_name }}
+          releaseName: apine ${{ github.ref_name }}
+          releaseBody: See the assets to download and install this version.
+          prerelease: false
+          generateReleaseNotes: true
+          uploadUpdaterJson: false
+          retryAttempts: 2
+          args: ${{ matrix.args }}
