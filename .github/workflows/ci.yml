@@ -10,12 +10,15 @@ concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
 
+permissions:
+  contents: read
+
 defaults:
   run:
     working-directory: apine
 
 jobs:
-  ci:
+  web:
     name: Lint & Build
     runs-on: ubuntu-latest
 
@@ -39,3 +42,97 @@ jobs:
       # tsc -b runs as part of `build`, so types are enforced here.
       - name: Typecheck & Build
         run: npm run build
+
+  rust:
+    name: Rust
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Install Linux build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
+
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: apine/src-tauri -> target
+
+      - name: Install frontend dependencies
+        run: npm ci
+
+      # generate_context! resolves frontendDist (../dist) at compile time, so the
+      # frontend has to exist before any cargo command runs.
+      - name: Build frontend
+        run: npm run build
+
+      - name: Format
+        run: cargo fmt --all -- --check
+        working-directory: apine/src-tauri
+
+      - name: Clippy
+        run: cargo clippy --locked --all-targets -- --deny warnings
+        working-directory: apine/src-tauri
+
+      - name: Check
+        run: cargo check --locked
+        working-directory: apine/src-tauri
+
+  tauri:
+    name: Tauri build (${{ matrix.platform }})
+    runs-on: ${{ matrix.platform }}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: macos-latest
+            apt: ''
+          - platform: windows-latest
+            apt: ''
+          - platform: ubuntu-latest
+            apt: >-
+              libwebkit2gtk-4.1-dev
+              libappindicator3-dev
+              librsvg2-dev
+              patchelf
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Install Linux build dependencies
+        if: matrix.apt != ''
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ${{ matrix.apt }}
+
+      - name: Set up Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: 26
+          cache: 'npm'
+          cache-dependency-path: apine/package-lock.json
+
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: apine/src-tauri -> target
+
+      - name: Install dependencies
+        run: npm ci
+
+      # --debug keeps the per-PR matrix affordable; the release workflow does the
+      # full optimised bundle build. --no-bundle skips installer packaging, which
+      # is only meaningfully tested at release time.
+      - name: Build
+        run: npm run tauri -- build --ci --debug --no-bundle
